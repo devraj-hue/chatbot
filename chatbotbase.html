@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>AI Chatbot</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin:0; padding:0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius:8px; box-shadow: 0 2px 8px #ccc; padding: 24px; }
+    h2 { text-align: center; color: #444; }
+    #chat-box { min-height: 300px; max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #eee; background: #fafafa; margin-bottom: 12px; border-radius: 4px; }
+    .msg { margin: 8px 0; }
+    .user { color: #0a6efd; }
+    .ai { color: #555; }
+    form { display: flex; }
+    input[type="text"] { flex: 1; padding: 10px; border-radius: 4px 0 0 4px; border: 1px solid #ccc; font-size: 16px; }
+    button { padding: 0 18px; border-radius: 0 4px 4px 0; border: 1px solid #0a6efd; background: #0a6efd; color: #fff; font-size: 16px; cursor: pointer; }
+    button:disabled { background: #aaa; border-color: #aaa; }
+    .reset-btn { background: #dc3545; border-color: #dc3545; margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>AI Chatbot</h2>
+    <div id="chat-box"></div>
+    <form id="chat-form" autocomplete="off">
+      <input id="prompt" type="text" placeholder="Type a message..." required autofocus />
+      <button type="submit">Send</button>
+      <button type="button" class="reset-btn" id="reset-btn">Reset</button>
+    </form>
+  </div>
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const chatForm = document.getElementById('chat-form');
+    const promptInput = document.getElementById('prompt');
+    const resetBtn = document.getElementById('reset-btn');
+
+    function addMsg(role, content) {
+      const msg = document.createElement('div');
+      msg.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+      msg.innerHTML = `<strong>${role === 'user' ? 'You' : 'AI'}:</strong> ${content}`;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function loadHistory() {
+      fetch('/history')
+        .then(resp => resp.json())
+        .then(history => {
+          chatBox.innerHTML = '';
+          history.forEach(m => addMsg(m.role, m.content));
+        });
+    }
+
+    chatForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+      addMsg('user', prompt);
+      promptInput.value = '';
+      fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      })
+      .then(resp => resp.json())
+      .then(data => addMsg('assistant', data.reply));
+    });
+
+    resetBtn.addEventListener('click', function() {
+      fetch('/reset', { method: 'POST' })
+        .then(() => {
+          chatBox.innerHTML = '';
+        });
+    });
+
+    window.onload = loadHistory;
+  </script>
+</body>
+</html>
